@@ -13,7 +13,9 @@ Every component of a language model — attention, residual, MLP, normalization,
 $$K(z, \bar{z}) = \frac{\alpha}{2}|z|^4 + \beta|z|^2$$
 
 Setting α = 0 recovers a standard Transformer. Training increases α 13×, demonstrating that cross-entropy gradient descent actively discovers curved geometry.
+## Architecture: Four-Fold Unity
 
+![KUT Architecture](kut_architecture.svg)
 ## Repository Structure
 
 | File | Description |
