@@ -1,4 +1,4 @@
-[![Paper](https://img.shields.io/badge/Paper-arXiv-red)](链接)
+[![Paper]((https://doi.org/10.5281/zenodo.19955719))](链接)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-orange.svg)](https://pytorch.org)
