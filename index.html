@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KUT — Kähler Unified Transformer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#020108;
+  --bg-soft:#0a0518;
+  --fg:#e8e6f5;
+  --fg-mute:#9b94c0;
+  --fg-dim:#5a546f;
+  --purple:#a78bfa;
+  --teal:#60f0c8;
+  --amber:#fbbf24;
+  --border:rgba(255,255,255,0.08);
+  --max:1100px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font:400 16px/1.7 -apple-system,system-ui,'Inter',sans-serif;overflow-x:hidden}
+a{color:var(--purple);text-decoration:none}
+a:hover{color:var(--teal)}
+code,pre{font-family:'SF Mono','Monaco',Menlo,Consolas,monospace;font-size:0.92em}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(2,1,8,0.7);border-bottom:0.5px solid var(--border)}
+nav .inner{max-width:var(--max);margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+nav .brand{font-weight:600;letter-spacing:2px;font-size:13px;background:linear-gradient(135deg,var(--purple),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+nav .links{display:flex;gap:28px;font-size:13px;letter-spacing:1px;text-transform:uppercase}
+nav .links a{color:var(--fg-mute);transition:color .2s}
+nav .links a:hover{color:var(--fg)}
+
+.hero{position:relative;height:100vh;min-height:600px;width:100%;overflow:hidden}
+#gl{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+.hero-content{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:5;width:100%;padding:0 24px;pointer-events:none;opacity:0;animation:fadeUp 2s ease 0.8s forwards}
+.hero h1{font-size:clamp(36px,7vw,84px);font-weight:200;letter-spacing:clamp(2px,0.8vw,8px);line-height:1.05;text-transform:uppercase;text-shadow:0 0 80px rgba(120,80,255,0.4)}
+.hero h1 .k{font-weight:600;background:linear-gradient(135deg,#c4b5fd,#6ee7b7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero .formula{font:300 clamp(14px,2.4vw,28px) system-ui;color:rgba(167,139,250,0.85);margin-top:16px;letter-spacing:clamp(1px,0.4vw,4px)}
+.hero .tagline{font:300 clamp(11px,1.3vw,15px) system-ui;color:var(--fg-mute);margin-top:20px;letter-spacing:clamp(1px,0.5vw,5px);text-transform:uppercase;opacity:0.7}
+.hero .authors{margin-top:28px;font-size:14px;color:var(--fg-mute)}
+.hero .authors strong{color:var(--fg);font-weight:500}
+.hero .ctas{margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;pointer-events:auto}
+.hero .ctas a{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:999px;border:0.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);color:var(--fg);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;transition:all .25s;backdrop-filter:blur(10px)}
+.hero .ctas a:hover{background:rgba(167,139,250,0.15);border-color:var(--purple);transform:translateY(-1px)}
+.hero .ctas a.primary{background:linear-gradient(135deg,rgba(167,139,250,0.25),rgba(96,240,200,0.15));border-color:rgba(167,139,250,0.4)}
+.scroll-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--fg-dim);letter-spacing:3px;text-transform:uppercase;z-index:5;animation:bob 2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,0);opacity:0.5}50%{transform:translate(-50%,6px);opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translate(-50%,-46%)}to{opacity:1;transform:translate(-50%,-50%)}}
+
+section{padding:96px 24px;max-width:var(--max);margin:0 auto}
+section h2{font-size:clamp(22px,3vw,32px);font-weight:300;letter-spacing:1px;margin-bottom:8px;text-align:center}
+section h2 .accent{font-weight:600;background:linear-gradient(135deg,var(--purple),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+section .eyebrow{text-align:center;font-size:11px;letter-spacing:4px;color:var(--purple);text-transform:uppercase;margin-bottom:14px;font-weight:500}
+section .lead{max-width:760px;margin:24px auto 0;text-align:center;color:var(--fg-mute);font-size:17px;line-height:1.75}
+
+.divider{width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--purple),transparent);margin:0 auto 32px}
+
+.tldr{background:linear-gradient(180deg,rgba(167,139,250,0.04),rgba(96,240,200,0.02));border:0.5px solid var(--border);border-radius:16px;padding:36px 40px;margin-top:40px}
+.tldr p{font-size:16px;color:var(--fg);margin-bottom:12px;line-height:1.8}
+.tldr p:last-child{margin-bottom:0}
+.tldr .key{color:var(--teal);font-weight:500}
+
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:48px}
+.metric{border:0.5px solid var(--border);border-radius:12px;padding:24px;background:rgba(255,255,255,0.015);text-align:center;transition:all .3s}
+.metric:hover{border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.04);transform:translateY(-2px)}
+.metric .v{font-size:28px;font-weight:600;background:linear-gradient(135deg,#c4b5fd,#6ee7b7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2}
+.metric .l{font-size:11px;color:var(--fg-dim);margin-top:8px;letter-spacing:1.5px;text-transform:uppercase}
+
+.unity{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:48px}
+.branch{border:0.5px solid var(--border);border-radius:14px;padding:28px;background:rgba(255,255,255,0.01);transition:all .3s;position:relative;overflow:hidden}
+.branch::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.branch[data-c="g"]::before{background:#60f0c8}
+.branch[data-c="p"]::before{background:#a78bfa}
+.branch[data-c="ph"]::before{background:#fb7185}
+.branch[data-c="i"]::before{background:#fbbf24}
+.branch:hover{transform:translateY(-3px);background:rgba(255,255,255,0.03)}
+.branch h3{font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;font-weight:600;color:var(--fg)}
+.branch h3 .ic{font-size:11px;opacity:0.5;margin-right:8px}
+.branch p{font-size:14px;color:var(--fg-mute);line-height:1.6;margin-bottom:8px}
+.branch code{display:block;font-size:13px;color:var(--teal);margin:6px 0;padding:8px 10px;background:rgba(96,240,200,0.05);border-radius:6px;border-left:2px solid rgba(96,240,200,0.3)}
+
+.findings{margin-top:48px}
+.finding{padding:24px 0;border-bottom:0.5px solid var(--border);display:grid;grid-template-columns:80px 1fr;gap:24px;align-items:start}
+.finding:last-child{border-bottom:none}
+.finding .num{font-size:36px;font-weight:200;color:var(--fg-dim);line-height:1}
+.finding .body h4{font-size:17px;font-weight:500;margin-bottom:8px;color:var(--fg)}
+.finding .body p{font-size:14px;color:var(--fg-mute);line-height:1.7}
+.finding .body code{color:var(--teal);background:rgba(96,240,200,0.08);padding:1px 6px;border-radius:3px;font-size:12px}
+
+.gen-samples{margin-top:48px;display:grid;gap:16px}
+.sample{border:0.5px solid var(--border);border-radius:10px;padding:18px 22px;background:rgba(255,255,255,0.01);font-family:'SF Mono','Monaco',monospace;font-size:13px;line-height:1.7}
+.sample .prompt{color:var(--fg-dim);margin-bottom:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.sample .text{color:var(--fg-mute)}
+.sample .text .gen{color:var(--teal)}
+
+.bibtex{margin-top:36px;background:rgba(255,255,255,0.02);border:0.5px solid var(--border);border-radius:10px;padding:20px 24px;font-family:'SF Mono','Monaco',monospace;font-size:13px;color:var(--fg-mute);overflow-x:auto;line-height:1.7;white-space:pre}
+
+.repo-cta{text-align:center;padding:80px 24px;border-top:0.5px solid var(--border);margin-top:64px;background:linear-gradient(180deg,transparent,rgba(167,139,250,0.04))}
+.repo-cta h3{font-size:clamp(20px,3vw,28px);font-weight:300;margin-bottom:16px;letter-spacing:1px}
+.repo-cta p{color:var(--fg-mute);margin-bottom:32px;max-width:520px;margin-left:auto;margin-right:auto}
+.repo-cta .repo-btn{display:inline-flex;align-items:center;gap:14px;padding:18px 36px;border-radius:14px;background:linear-gradient(135deg,rgba(167,139,250,0.2),rgba(96,240,200,0.1));border:0.5px solid rgba(167,139,250,0.4);color:var(--fg);font-size:14px;letter-spacing:2px;text-transform:uppercase;transition:all .3s;font-weight:500}
+.repo-cta .repo-btn:hover{transform:translateY(-2px);background:linear-gradient(135deg,rgba(167,139,250,0.3),rgba(96,240,200,0.2));box-shadow:0 12px 40px rgba(120,80,255,0.2)}
+
+footer{text-align:center;padding:36px 24px;border-top:0.5px solid var(--border);color:var(--fg-dim);font-size:12px;letter-spacing:1.5px}
+footer a{color:var(--fg-dim)}
+footer a:hover{color:var(--purple)}
+footer .row{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:14px}
+
+@media(max-width:640px){
+  nav .inner{padding:12px 16px}
+  nav .links{gap:14px;font-size:11px}
+  section{padding:64px 20px}
+  .tldr{padding:24px}
+  .finding{grid-template-columns:50px 1fr;gap:14px}
+  .finding .num{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+<div class="inner">
+<div class="brand">KUT · CDIP</div>
+<div class="links">
+<a href="#abstract">Abstract</a>
+<a href="#unity">Architecture</a>
+<a href="#results">Results</a>
+<a href="#cite">Cite</a>
+<a href="https://github.com/Leonlin2026/-The-Complex-Dynamic-Intelligence-Protocol-CDIP-Corpus" target="_blank">GitHub ↗</a>
+</div>
+</div>
+</nav>
+
+<div class="hero">
+<canvas id="gl"></canvas>
+<div class="hero-content">
+<h1><span class="k">Kähler</span> Unified<br>Transformer</h1>
+<div class="formula">K(z, z̄) = (α/2)|z|⁴ + β|z|²</div>
+<div class="tagline">A language model derived from a single geometric potential</div>
+<div class="authors"><strong>Jian Lin</strong> · The Wallfacer Project · CDIP Research Program · 2026</div>
+<div class="ctas">
+<a href="#abstract" class="primary">Read more</a>
+<a href="https://github.com/Leonlin2026/-The-Complex-Dynamic-Intelligence-Protocol-CDIP-Corpus" target="_blank">Code</a>
+<a href="https://github.com/Leonlin2026/-The-Complex-Dynamic-Intelligence-Protocol-CDIP-Corpus" target="_blank">Paper</a>
+</div>
+</div>
+<div class="scroll-hint">scroll</div>
+</div>
+
+<section id="abstract">
+<div class="eyebrow">Abstract</div>
+<h2>One potential. <span class="accent">Every component.</span></h2>
+<div class="divider"></div>
+<p class="lead">KUT is a transformer architecture in which attention, residual transport, normalization, the MLP, the readout head, and the training loss are all derived from a single quartic Kähler potential <code>K = (α/2)|z|⁴ + β|z|²</code>. Setting α → 0 exactly recovers the standard Transformer. Training a 578M-parameter model from a Qwen3 donor on 450M tokens of WikiText and FineMath grows α by 13× — cross-entropy gradient descent actively discovers curved geometry.</p>
+
+<div class="tldr">
+<p><span class="key">▸ One potential generates everything.</span> Metric, connection, curvature, quantization scale ℏ = π/ω, vacuum mass, attractor forces, and section readout all derive from K — no hand-tuned geometric weights, no separate temperature, no ad-hoc regularizers.</p>
+<p><span class="key">▸ Causally safe and FlashAttention-compatible.</span> Attention reduces to <code>⟨R(Γ)q, k⟩</code> — a single matmul with a connection-induced rotation. Three locks (Γ in attention, g in MLP/norm, g·ℏ in readout) prevent geometry-bypass shortcuts; verified by 25/25 SP/AR agreement.</p>
+<p><span class="key">▸ Generation works.</span> The flat limit (α → 0) is exact at the architecture level. Training drives α from 0.05 to 0.65 — a 13× growth — while ℏω = π is preserved to four decimal places. PPL drops from 96 (WikiText, 100M) to 43 (FineMath, 450M) with coherent text and math generation.</p>
+</div>
+</section>
+
+<section id="unity">
+<div class="eyebrow">Architecture</div>
+<h2>The four-fold <span class="accent">unity of K</span></h2>
+<div class="divider"></div>
+<p class="lead">A single scalar potential simultaneously generates four faces of the model — geometry (the manifold itself), probability (how attention scores quantize), physics (how the field evolves), and information (how hidden states project to logits).</p>
+
+<div class="unity">
+<div class="branch" data-c="g">
+<h3><span class="ic">01</span>Geometry</h3>
+<p>The Kähler metric, connection, and curvature.</p>
+<code>g = 2αr + β</code>
+<code>Γ = 2α / g</code>
+<code>κ = 2αβ / g²</code>
+</div>
+<div class="branch" data-c="p">
+<h3><span class="ic">02</span>Probability</h3>
+<p>The quantization scale and section weight.</p>
+<code>ℏ = π / ω</code>
+<code>m = √(g / g_vac)</code>
+<code>ω = √(g_vac / v²)</code>
+</div>
+<div class="branch" data-c="ph">
+<h3><span class="ic">03</span>Physics</h3>
+<p>Attractor forces and field evolution.</p>
+<code>F_SSB = −κ(r−v²)z</code>
+<code>F_Calabi = −ω(κ−κ̄)z</code>
+<code>dt = 1 / (Lω)</code>
+</div>
+<div class="branch" data-c="i">
+<h3><span class="ic">04</span>Information</h3>
+<p>Section readout and the loss function.</p>
+<code>Ψ = m · R(θ) · h</code>
+<code>logits = ⟨Φ, Ψ⟩ / ℏ</code>
+<code>loss = CE + (log ω̄/ω*)²</code>
+</div>
+</div>
+</section>
+
+<section id="results">
+<div class="eyebrow">Results</div>
+<h2>What the experiments <span class="accent">verify</span></h2>
+<div class="divider"></div>
+
+<div class="metrics">
+<div class="metric"><div class="v">578M</div><div class="l">Parameters</div></div>
+<div class="metric"><div class="v">384</div><div class="l">Geometric scalars</div></div>
+<div class="metric"><div class="v">α × 13</div><div class="l">Curvature growth</div></div>
+<div class="metric"><div class="v">ℏω = π</div><div class="l">Bohr–Sommerfeld</div></div>
+<div class="metric"><div class="v">PPL 43</div><div class="l">FineMath, 450M tokens</div></div>
+<div class="metric"><div class="v">25 / 25</div><div class="l">Causal safety</div></div>
+</div>
+
+<div class="findings">
+<div class="finding">
+<div class="num">01</div>
+<div class="body">
+<h4>α direction is the architectural health indicator</h4>
+<p>If α grows during training, geometry is necessary — the model is using the manifold structure. If α decays, the model is destroying geometry to take a shortcut. KUT v13.3 grows α from <code>0.049</code> to <code>0.654</code> on FineMath — a 13× increase — while loss decreases monotonically. The geometric channel is doing real work.</p>
+</div>
+</div>
+<div class="finding">
+<div class="num">02</div>
+<div class="body">
+<h4>Bohr–Sommerfeld quantization holds at the architecture level</h4>
+<p>The identity <code>ℏω = π</code> is enforced as a mathematical constraint, not as a soft penalty. Across 450M tokens of training, the empirical product stays within four decimal places of π. The quantization scale ℏ is not a learned hyperparameter — it is a derivable consequence of the geometry.</p>
+</div>
+</div>
+<div class="finding">
+<div class="num">03</div>
+<div class="body">
+<h4>Section readout is necessary; the linear head degenerates</h4>
+<p>Ablation comparing the geometric section <code>Ψ = m·R(θ)·h</code> against a standard linear head (with backbone identical) reveals that the linear head produces only token salad ("narburyularityory…") while the section produces coherent prose and recognizable mathematical notation. The geometry-to-symbol bridge is the section, not the matrix.</p>
+</div>
+</div>
+<div class="finding">
+<div class="num">04</div>
+<div class="body">
+<h4>FlashAttention compatibility, zero accuracy compromise</h4>
+<p>The full Hermitian attention <code>(π/ℏ)·⟨R(Γ)q, k⟩/√d</code> reduces to a single matmul of <code>R(Γ)q</code> against <code>k</code> — directly compatible with the FlashAttention kernel. The connection rotation <code>R(Γ)</code> is a per-head 2×2 transform that absorbs the entire symplectic structure into the queries, no kernel modification needed.</p>
+</div>
+</div>
+</div>
+
+<div class="gen-samples">
+<div class="sample">
+<div class="prompt">Prompt → Greedy generation, KUM-Lumina-0.6B</div>
+<div class="text">Theorem: For all integers n,<span class="gen"> there exists a positive integer n such that n²−1 is a factor of the product of the integers. For example, the followi…</span></div>
+</div>
+<div class="sample">
+<div class="prompt">Quadratic formula prediction · top-1 probabilities</div>
+<div class="text">x = (-b +/- sqrt(b² - 4ac)) / 2a<span class="gen"> · ^² → 0.956 · +bx → 0.966 · = 0 → 0.997 · /2a → 0.807</span></div>
+</div>
+</div>
+</section>
+
+<section id="cite">
+<div class="eyebrow">BibTeX</div>
+<h2>How to <span class="accent">cite</span></h2>
+<div class="divider"></div>
+
+<div class="bibtex">@article{lin2026kut,
+  title={K{\"a}hler Unified Transformer: A Language Model Architecture
+         Derived from a Single Geometric Potential},
+  author={Lin, Jian},
+  year={2026},
+  publisher={Zenodo},
+  note={The Wallfacer Project, CDIP Research Program},
+  url={https://github.com/Leonlin2026/-The-Complex-Dynamic-Intelligence-Protocol-CDIP-Corpus}
+}</div>
+</section>
+
+<div class="repo-cta">
+<h3>Code, paper, and experiments</h3>
+<p>All architecture code, training scripts, and experimental artifacts are released under MIT. The paper is licensed CC BY 4.0.</p>
+<a href="https://github.com/Leonlin2026/-The-Complex-Dynamic-Intelligence-Protocol-CDIP-Corpus" target="_blank" class="repo-btn">
+<svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+View on GitHub
+</a>
+</div>
+
+<footer>
+<div class="row">
+<a href="#abstract">Abstract</a>
+<a href="#unity">Architecture</a>
+<a href="#results">Results</a>
+<a href="#cite">Cite</a>
+<a href="https://github.com/Leonlin2026/-The-Complex-Dynamic-Intelligence-Protocol-CDIP-Corpus" target="_blank">GitHub</a>
+</div>
+<div>The Wallfacer Project · Jian Lin · 2026 · MIT License</div>
+</footer>
+
+<script>
+window.addEventListener('load', function() {
+  var script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  script.onload = initScene;
+  script.onerror = initFallback;
+  document.head.appendChild(script);
+});
+
+function initFallback() {
+  var cv = document.getElementById('gl');
+  var ctx = cv.getContext('2d');
+  cv.width = innerWidth; cv.height = innerHeight;
+  for (var i = 0; i < 600; i++) {
+    ctx.fillStyle = 'rgba(180,170,255,' + (0.1 + Math.random()*0.5) + ')';
+    ctx.beginPath();
+    ctx.arc(Math.random()*cv.width, Math.random()*cv.height, Math.random()*1.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function initScene() {
+  try {
+    var cv = document.getElementById('gl');
+    var W = cv.clientWidth, H = cv.clientHeight;
+    var scene = new THREE.Scene();
+    var cam = new THREE.PerspectiveCamera(45, W/H, 0.1, 500);
+    var renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(W, H, false);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    renderer.setClearColor(0x020108, 1);
+
+    addEventListener('resize', function() {
+      W = cv.clientWidth; H = cv.clientHeight;
+      cam.aspect = W/H; cam.updateProjectionMatrix();
+      renderer.setSize(W, H, false);
+    });
+
+    var AA = 0.5, BB = 0.7, VS = 1.0, vR = Math.sqrt(VS);
+    function KF(r) { return (AA/2)*r*r + BB*r; }
+    function GF(r) { return 2*AA*r + BB; }
+    var ringY = KF(VS) * 0.1;
+
+    [2000,800,300].forEach(function(n, layer) {
+      var g = new THREE.BufferGeometry();
+      var p = new Float32Array(n*3), c = new Float32Array(n*3);
+      for (var i = 0; i < n; i++) {
+        var theta = Math.random()*Math.PI*2, phi = Math.acos(2*Math.random()-1);
+        var rd = [80,40,20][layer];
+        p[i*3] = rd*Math.sin(phi)*Math.cos(theta);
+        p[i*3+1] = rd*Math.sin(phi)*Math.sin(theta);
+        p[i*3+2] = rd*Math.cos(phi);
+        var b = 0.3 + Math.random()*0.7;
+        c[i*3] = b*0.9; c[i*3+1] = b*0.8; c[i*3+2] = b;
+      }
+      g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
+      scene.add(new THREE.Points(g, new THREE.PointsMaterial({
+        size: [0.08,0.15,0.3][layer], vertexColors: true, transparent: true,
+        opacity: [0.3,0.5,0.8][layer], sizeAttenuation: true, depthWrite: false
+      })));
+    });
+
+    var RES = 100, MR = 5;
+    var sg = new THREE.BufferGeometry();
+    var sv = [], sc2 = [], si = [];
+    for (var i = 0; i <= RES; i++) {
+      for (var j = 0; j <= RES; j++) {
+        var r = i/RES*MR, th = j/RES*Math.PI*2;
+        sv.push(r*Math.cos(th), KF(r)*0.1, r*Math.sin(th));
+        var rat = GF(r)/GF(VS), nv = Math.exp(-(r-vR)*(r-vR)*6);
+        sc2.push(0.02+nv*0.25+Math.max(0,(rat-1)*0.06), 0.005+nv*0.7, 0.04+nv*0.4+Math.min(rat*0.12,0.35));
+        if (i < RES && j < RES) {
+          var a = i*(RES+1)+j, b2 = a+1, c3 = (i+1)*(RES+1)+j, d = c3+1;
+          si.push(a, c3, b2, b2, c3, d);
+        }
+      }
+    }
+    sg.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3));
+    sg.setAttribute('color', new THREE.Float32BufferAttribute(sc2, 3));
+    sg.setIndex(si); sg.computeVertexNormals();
+    scene.add(new THREE.Mesh(sg, new THREE.MeshPhongMaterial({
+      vertexColors: true, transparent: true, opacity: 0.45, side: THREE.DoubleSide,
+      shininess: 120, specular: new THREE.Color(0x6050d0)
+    })));
+    scene.add(new THREE.Mesh(sg.clone(), new THREE.MeshBasicMaterial({
+      vertexColors: true, wireframe: true, transparent: true, opacity: 0.05
+    })));
+
+    var ringMesh = new THREE.Mesh(new THREE.TorusGeometry(vR, 0.01, 16, 200), new THREE.MeshBasicMaterial({ color: 0x60f0c8 }));
+    ringMesh.rotation.x = Math.PI/2; ringMesh.position.y = ringY; scene.add(ringMesh);
+    [0.04,0.1,0.25,0.6,1.2].forEach(function(s, idx) {
+      var gm = new THREE.Mesh(new THREE.TorusGeometry(vR, s, 8, 100), new THREE.MeshBasicMaterial({
+        color: idx < 3 ? 0x60f0c8 : 0x4080ff, transparent: true,
+        opacity: [0.2,0.08,0.03,0.012,0.005][idx],
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      gm.rotation.x = Math.PI/2; gm.position.y = ringY; scene.add(gm);
+    });
+
+    var PC = 4000;
+    var pGeo = new THREE.BufferGeometry();
+    var pPos = new Float32Array(PC*3), pCol = new Float32Array(PC*3), pData = [];
+    for (var i = 0; i < PC; i++) {
+      var r = 0.05 + Math.random()*4.2, a = Math.random()*Math.PI*2;
+      pData.push({ r:r, a:a, sp:(0.0003+Math.random()*0.003)*(Math.random()>0.5?1:-1), yo:(Math.random()-0.5)*0.12, ph:Math.random()*Math.PI*2 });
+      var near = Math.abs(r-vR) < 0.4;
+      pCol[i*3] = near ? 0.35 : 0.7+Math.random()*0.3;
+      pCol[i*3+1] = near ? 0.85+Math.random()*0.15 : 0.2+Math.random()*0.15;
+      pCol[i*3+2] = near ? 0.7 : 0.15;
+    }
+    pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+    pGeo.setAttribute('color', new THREE.Float32BufferAttribute(pCol, 3));
+    scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({
+      size: 0.022, vertexColors: true, transparent: true, opacity: 0.7,
+      sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false
+    })));
+
+    var BPC = 400;
+    var bGeo = new THREE.BufferGeometry();
+    var bPos = new Float32Array(BPC*3), bCol = new Float32Array(BPC*3), bData = [];
+    for (var i = 0; i < BPC; i++) {
+      var r = vR + (Math.random()-0.5)*0.25, a = Math.random()*Math.PI*2;
+      bData.push({ r:r, a:a, sp:(0.002+Math.random()*0.005)*(Math.random()>0.5?1:-1), ph:Math.random()*Math.PI*2 });
+      bCol[i*3] = 0.4; bCol[i*3+1] = 0.95; bCol[i*3+2] = 0.8;
+    }
+    bGeo.setAttribute('position', new THREE.Float32BufferAttribute(bPos, 3));
+    bGeo.setAttribute('color', new THREE.Float32BufferAttribute(bCol, 3));
+    scene.add(new THREE.Points(bGeo, new THREE.PointsMaterial({
+      size: 0.04, vertexColors: true, transparent: true, opacity: 0.9,
+      sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false
+    })));
+
+    var beams = [];
+    for (var i = 0; i < 24; i++) {
+      var ba = i/24*Math.PI*2;
+      var bMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.003, 0.0005, 3, 3),
+        new THREE.MeshBasicMaterial({ color: 0x7060ff, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false })
+      );
+      bMesh.position.set(vR*Math.cos(ba), ringY+1.5, vR*Math.sin(ba));
+      scene.add(bMesh); beams.push({ mesh: bMesh, a: ba });
+    }
+
+    scene.add(new THREE.AmbientLight(0x0a0820, 0.5));
+    var L1 = new THREE.PointLight(0x7060ff, 3, 30); L1.position.set(0,8,0); scene.add(L1);
+    var L2 = new THREE.PointLight(0x60f0c8, 2, 20); L2.position.set(0,ringY,0); scene.add(L2);
+
+    var time = 0;
+    function loop() {
+      time += 0.0015;
+      var phase = time*0.08;
+      var camR = 7 + Math.sin(time*0.15)*1.2;
+      var camH = 3.5 + Math.sin(time*0.2)*0.6;
+      cam.position.set(Math.sin(phase)*camR, camH, Math.cos(phase)*camR);
+      cam.lookAt(0, ringY*0.4, 0);
+
+      for (var i = 0; i < PC; i++) {
+        var d = pData[i]; d.a += d.sp;
+        pPos[i*3] = d.r*Math.cos(d.a);
+        pPos[i*3+1] = KF(d.r)*0.1 + d.yo + Math.sin(time*3+d.ph)*0.008;
+        pPos[i*3+2] = d.r*Math.sin(d.a);
+      }
+      pGeo.attributes.position.needsUpdate = true;
+
+      for (var i = 0; i < BPC; i++) {
+        var d = bData[i]; d.a += d.sp;
+        bPos[i*3] = d.r*Math.cos(d.a);
+        bPos[i*3+1] = ringY + Math.sin(time*5+d.ph)*0.025;
+        bPos[i*3+2] = d.r*Math.sin(d.a);
+      }
+      bGeo.attributes.position.needsUpdate = true;
+
+      ringMesh.material.opacity = 0.8 + 0.2*Math.sin(time*3);
+      L2.intensity = 1.5 + Math.sin(time*2)*0.8;
+
+      for (var i = 0; i < beams.length; i++) {
+        var p = 0.5 + 0.5*Math.sin(time*4 + beams[i].a*4);
+        beams[i].mesh.material.opacity = 0.05 * p;
+        beams[i].mesh.scale.y = 0.3 + p*0.7;
+      }
+
+      renderer.render(scene, cam);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  } catch(e) {
+    console.error(e); initFallback();
+  }
+}
+</script>
+</body>
+</html>
